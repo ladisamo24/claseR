@@ -1,0 +1,319 @@
+---
+title: "Informe del Proyecto entrega 3"
+author: "Leidy Johanna Salazar Morales"
+date: "19/12/2021"
+output: html_document
+
+---
+
+### Introducción
+
+Este informe contiene el análisis de datos de un almacén, elaborado por medio 
+del lenguaje de programación R.
+
+```{r}
+#nrow(Ventas) #número de filas del dataset Ventas
+#ncol(Ventas) #número de columnas del dataset Ventas
+```
+
+
+El dataset Ventas comprende 12 variables y 1544 observaciones. Las 
+variabales son:
+
+* Mes
+* Producto
+* Código vendedor
+* Tipo producto
+* Tienda
+* Sector
+* Compra
+* Monto venta
+* Edad
+* Género
+* Punto de red
+* Frecuencia
+
+El dataset Vendedores comprende 2 variables y 5 observaciones. Las variables son:
+
+* Código
+* Nombre 
+
+
+### Problema a solucionar
+
+Quiero saber si hay una correlación entre la edad y los montos de las ventas.
+
+### Hipótesis a validar
+
+Hipótesis: Entre más edad tenga una persona, más dinero tiene y más dinero gasta,
+por ello más altos son los montos que la persona compra y más es la utilidad que
+le genera a la empresa.
+
+### Base inicial
+
+Esta es la estructura de mi base inicial
+
+Para reproducir este informe se requieren las siguientes librerías:
+
+```{r}
+#Librerias 
+library(readxl)
+library(readr)
+library(DT)
+library(ggplot2)
+library(dplyr)
+```
+
+
+```{r }
+#Carga de datos 
+Vendedores = read_csv("Data/Vendedores.csv")
+Ventas = read_excel("Data/Ventas.xlsx")
+
+#Estructura de las variables
+str(Ventas) #indica el tipo de variables de las columnas del dataset Ventas
+str(Vendedores) #indica el tipo de variables de las columnas del dataset Vendedores
+
+#Visualizar el dataset de ventas
+View(Ventas)
+View(Vendedores)
+
+#head(Ventas, 6) 
+
+#Ver las primeras filas del dataset
+DT::datatable(head(Ventas[,c(1:9)], 6)) 
+
+```
+
+```{r}
+nrow(Ventas) #número de filas del dataset Ventas
+ncol(Ventas) #número de columnas del dataset Ventas
+```
+
+
+### Resúmen de mi base de datos
+
+Es un breve resumen de estadística descriptiva de mis datos.
+
+```{r}
+
+#Resumen de todas las variables que hay en el dataset ventas
+summary(Ventas) 
+```
+
+En el summary del dataset "Ventas" se observa:
+
+* Variable Mes: El mes máximo es 12, que es diciembre. El mes mínimo debería ser 1, pero 
+  muestra -9, lo cual es un error que puede ser debido a un error de digitación.
+  Este tipo de error se soluciona en la parte de la limpieza de datos.
+  
+* Variable Código vendedor: Es un código que se asigna a cada vendedor. Ahí no puedo
+  sacar mediana, moda, etc.
+  
+* Variable Compra: Se puede ver que casi todo está en 0. "Compra" solamente puede
+  tomar los valores 0 ó 1. Reporta que el máximo es 2, esto es un error. Esta variable
+  también hace parte de la limpieza de datos.
+  
+* Variable Edad: Reporta como valor mínimo la edad -65, esto es un error. También hace
+  parte de la limpieza de datos. 
+  
+* Variable Monto venta: En esta variable el valor mínimo es 20 y el máximo es 17620.
+  Hay un rango (diferencia entre máximo y mínimo) muy grande entre estos dos valores. El
+  valor máximo está muy alejado de la media (586) y la mediana (893), por lo tanto, el valor 
+  máximo (17620) como un outlier (dato atípico)
+
+
+### Tratamiento de datos
+
+```{r}
+#Convertir una variable a factor
+Ventas$`Código vendedor`= as.factor(Ventas$`Código vendedor` )
+Vendedores$Codigo = as.factor(Vendedores$Codigo)
+```
+
+```{r}
+Ventas$Tienda[1:10]  #valores de la columna tienda de la fila 1 a 10
+```
+
+```{r}
+#Agregar columnas al dataset Ventas
+#Agregar una columna llamada Tipo de compra
+Ventas$"Tipo de compra" = ifelse(Ventas$`Monto venta` >1000,1,0)
+summary(Ventas$`Tipo de compra`)
+
+#Agregar una columna llamada Utilidad
+Ventas$Utilidad = Ventas$`Monto venta`*0.85
+summary(Ventas$Utilidad)
+
+#Agregar una columna correspondiente al nombre del vendedor
+Ventas = merge(Ventas,Vendedores,by.x = "Código vendedor",by.y = "Codigo", all.x = TRUE)
+```
+
+```{r}
+#Ver las primeras filas del dataset
+#DT::datatable(head(Ventas[,c(1:9)], 6)) 
+DT::datatable(head(Ventas, 2)) 
+```
+
+### Limpieza de datos
+
+```{r}
+#Verificar que las variables de edad y mes estén dentro de un rango lógico
+Ventas = Ventas[Ventas$Mes > 0 & Ventas$Edad > 0,]
+```
+
+En el summary, se identifica que la variable Edad tiene un valor de -65 años de edad 
+y en la variable Mes un -9, esto no es lógico. Debo quitar todas las filas en donde mes
+sea menor que 0, y en donde edad sea menor que 0.
+
+El dataset pasó de 1544 filas a 1526 filas.
+
+```{r}
+#Verificar que las variables categóricas no tengan datos de más
+table(Ventas$Compra)
+Ventas = Ventas[Ventas$Compra != 2 ,]
+```
+
+La variable categórica Compra tiene un dato de más que es 2. Compra sólo puede tener valores de 0 ó 1. Tengo 794 veces el 0; 721 veces el 1, y 11 veces el 2. El 2 no debe estar en el dataset. Tengo que borrar 11 registros(filas), que es donde aparece el número 2. 
+
+Después de ejecutar esto, paso a tener 1515 observaciones en el dataset Ventas.
+
+```{r}
+#Verficar que no hay datos faltantes
+Ventas = na.omit(Ventas)
+```
+
+Ahora tengo 1499 registros en el dataset Ventas.
+
+```{r}
+#Eliminar columnas(variables) que no aportan o que no deberían estar ahí
+Ventas$`Código vendedor` = NULL
+Ventas$`Punto de red` = NULL
+```
+
+En el dataset ventas puedo ver algunas variables que no me sirven, por ejemplo, la variable “Punto de red”. Esta variable la elimino. También elimino la variable “Código vendedor”, antes esta variable hacía falta para poder hacer la vinculación con el nombre del vendedor pero como ya la tengo en el datase Ventas, ya no necesito esa variable.  
+
+Eliminando las columnas "Código vendedor" y "Punto de red". Ahora solo hay 13 variables en el dataset.
+
+```{r}
+DT::datatable(head(Ventas, 2)) 
+```
+
+
+El gráfico de caja proporciona una visión general de la simetría de la distribución de los datos; si la mediana no está en el centro del rectángulo, la distribución no es simétrica. Es útil para ver la presencia de valores atípicos también llamados outliers.
+
+```{r}
+#Elimino datos atípicos(outliers) de la variable "Monto venta"
+boxplot(Ventas$`Monto venta`,col = "blue",main = "Montos",horizontal = TRUE) 
+```
+
+Solo 2 clientes hicieron compras por un monto muy grande. En la parte de la limpieza también hay que tener en cuenta esos datos atípicos (outliers).
+
+```{r}
+Ventas = Ventas[Ventas$`Monto venta`< 6000, ]
+```
+
+Del dataset de ventas, tomo únicamente las filas en donde el “monto de venta” es menor que 6000 y dejo coma para tener en cuenta todas las columnas. 
+
+Resultado:  solamente reduje 2 filas, es decir, había dos datos atípicos (outliers). Después de ejecutar esa línea de código, paso a tener 1497 filas con 13 variables. 
+
+Con la función summary puedo verificar que el conjunto de datos esté limpio:
+
+```{r}
+summary(Ventas)
+```
+
+
+
+### Análisis exploratorio de los datos EDA
+
+El diagrama de caja pertenece a las herramientas de la estadística descriptiva. Permite ver como es la dispersión de los puntos con la mediana, los percentiles 25 y 75 y los valores máximo y mínimo.
+
+```{r}
+#Gráfico de caja de la variable Monto venta
+boxplot(Ventas$`Monto venta`,outline = FALSE,col = "blue",main = "Montos Ventas",horizontal = TRUE)
+```
+
+Un boxplot interpreta los cuartiles de mi dataset. Los cuartiles sólo tienen sentido en las variables numéricas (Monto venta), no en las categóricas. Ete gráfico es más apropiado para variables numéricas que tienen infinitas posibilidades.
+
+Los cuartiles lo que me indica es donde se concentra el 25% de mis datos (primer cuartil Q1), el 50% de los datos (el segundo cuartil Q2 o mediana), el 75% de los datos (tercer cuartil Q3). También el mínimo y el máximo de los datos.
+
+El monto de venta máximo es 3000 y el monto de venta mínimo es 20. La mitad de los montos de venta es 874.4 (mediana o Q2), quiere decir que de todas las ventas que hago, la mitad son por un monto debajo de 874.4 Y la otra mitad con un monto superior a 874.4. El 25% de los datos son mayores a 1250. Donde más se frecuentan los datos, es en montos que están por debajo de 1000.
+
+```{r}
+#Gráfico de caja para la variable "Edad"
+boxplot(Ventas$Edad,col = "red",main = "Edades")
+```
+
+La edad mínima es 15 años y la máxima es 60 años. La mediana de la edad es 38 años, quiere decir el 50% de los clientes están por debajo de 38 años, y el otro 50% con una edad superior a 38 años. El 75% de los clientes tienen menos de 49 años.
+
+```{r}
+#Histograma 
+hist(Ventas$Utilidad,col = "grey",ylab = "Frecuencia de datos")
+hist(Ventas$`Monto venta`,col = "grey",ylab = "Frecuencia de datos")
+```
+
+Un histograma muestra que tanto se frecuentan o repiten los datos. Se observa en la gráfica que la gran mayoría de los montos vendidos se encuentran en montos bajos y entre más alto es el monto de venta menos se frecuentan. Es más escaso un monto alto que un monto bajo.
+
+
+```{r}
+#Correlación
+cor(Ventas$Edad, Ventas$`Monto venta`)
+```
+
+Esta función brinda el coeficiente de correlación de dos variables de un dataset. La correlación entre la edad y los montos de venta es de -0.78, esto significa que hay una correlación negativa de 78%. Se puede afirmar con cierto grado de seguridad, que entre más edad tengo, menos monto compra el cliente y menos utilidad genera. Puede ser que los productos estén orientados a jóvenes y la gente mayor no compra tanto y si compra no son montos altos.
+
+```{r}
+#Crear un gráfico
+plot(Ventas$Edad,Ventas$`Monto venta`,col = "red") 
+```
+
+En el gráfico se observa que cuando la edad aumenta, los montos de venta disminuyen.
+
+##### Media, mediana y desviación estándar de la variable "Monto venta"
+
+```{r}
+mean(Ventas$`Monto venta`)
+median(Ventas$`Monto venta`)
+sd(Ventas$`Monto venta`)
+```
+
+##### Media, mediana y desviación estándar de la variable "Edad"
+
+```{r}
+mean(Ventas$Edad)
+median(Ventas$Edad)
+sd(Ventas$Edad)
+```
+
+#### Gráficos en R con ggplot2
+
+```{r}
+ggplot(data = Ventas,aes(Compra)) + geom_bar(aes(fill = factor(Género)))
+```
+
+```{r}
+ggplot(data = Ventas,aes(Producto)) + geom_bar(aes(fill = factor(Frecuencia)))
+
+```
+
+variable en el eje x = Producto
+variable en el eje y = Ventas
+geom_bar = significa que es un gráfico de columnas.
+Frecuencia = esta variable dice que tanto se compra de cada producto.
+
+### Conclusiones
+
+* Se deben borrar los datos faltantes porque distorsionan el análisis de los datos. No se puede eliminar solamente una celda, hay que borrar toda la fila. Por ello, en la parte de limpieza de datos el número de filas (observaciones) disminuye.
+
+* Para realizar el análisis exploratorio de los datos EDA, primero hay que hacer limpmieza de datos.
+
+* La correlación entre la edad y los montos de venta es de -0.78, esto significa que hay una correlación negativa de 78%. Se puede afirmar con cierto grado de seguridad, que entre más edad tengo, menos monto compra el cliente y menos utilidad genera. Puede ser que los productos estén orientados a jóvenes y la gente mayor no compra tanto y si compra no son montos altos.
+
+
+
+
+
+
+
+
